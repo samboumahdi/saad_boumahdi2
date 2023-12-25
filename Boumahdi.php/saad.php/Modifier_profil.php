@@ -1,19 +1,5 @@
 <?php
-// Paramètres de connexion à la base de données
-$host = 'localhost';
-$db   = 'ecom1_project';
-$user = 'root';
-$pass = '';
-$port = '3306';
-$charset = 'utf8mb4';
-
-// Connexion à la base de données avec MySQLi
-$conn = mysqli_connect($host, $user, $pass, $db, $port);
-
-// Vérification de la connexion
-if (!$conn) {
-    die("La connexion à la base de données a échoué : " . mysqli_connect_error());
-}
+include('config.php');
 
 // Vérifiez si l'utilisateur est connecté
 session_start();
@@ -30,10 +16,13 @@ $recupUser = mysqli_prepare($conn, 'SELECT * FROM user WHERE id = ?');
 mysqli_stmt_bind_param($recupUser, 'i', $user_id);
 mysqli_stmt_execute($recupUser);
 
-if (mysqli_stmt_num_rows($recupUser) > 0) {
-    mysqli_stmt_bind_result($recupUser, $id, $first_name, $lname, $email, $pwd);
+$recupUserResult = mysqli_stmt_get_result($recupUser);
 
-    mysqli_stmt_fetch($recupUser);
+if (mysqli_num_rows($recupUserResult) > 0) {
+    $userInfos = mysqli_fetch_assoc($recupUserResult);
+    $first_name = $userInfos['fname'];
+    $lname = $userInfos['lname'];
+    $email = $userInfos['email'];
 
     if (isset($_POST['valider'])) {
         // Récupérez les données du formulaire
@@ -43,7 +32,7 @@ if (mysqli_stmt_num_rows($recupUser) > 0) {
         $email_saisi = htmlspecialchars($_POST['email']);
 
         // Mettez à jour les informations de l'utilisateur dans la base de données, le mot de passe est modifié si le champ n'est pas vide
-        if (!empty($pwd_saisi)) {
+        if ($pwd_saisi != "") {
             $pwd_saisi_hash = password_hash($pwd_saisi, PASSWORD_DEFAULT);
             $updateUser = mysqli_prepare($conn, 'UPDATE user SET fname = ?, pwd = ?, email = ?, lname = ? WHERE id = ?');
             mysqli_stmt_bind_param($updateUser, 'ssssi', $first_name_saisi, $pwd_saisi_hash, $email_saisi, $lname_saisi, $user_id);
@@ -53,48 +42,89 @@ if (mysqli_stmt_num_rows($recupUser) > 0) {
             mysqli_stmt_bind_param($updateUser, 'sssi', $first_name_saisi, $email_saisi, $lname_saisi, $user_id);
             mysqli_stmt_execute($updateUser);
         }
+
+        // Redirigez l'utilisateur après la mise à jour
+        header('Location: Accueil_client.php');
+        exit;
     }
 }
-
-
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Modifier Profil</title>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier Profil</title>
     <style>
-        <!-- Votre CSS ici -->
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #00acee;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type="submit"] {
+            background-color: #00acee;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #007bb5;
+        }
     </style>
 </head>
 <body>
-    <?php
-    // ... (votre code PHP pour la connexion et la mise à jour des données)
-
-    // Définissez les variables à utiliser dans le formulaire
-    $first_name_affiche = isset($first_name_saisi) ? $first_name_saisi : (isset($first_name) ? $first_name : '');
-    $lname_affiche = isset($lname_saisi) ? $lname_saisi : (isset($lname) ? $lname : '');
-    $email_affiche = isset($email_saisi) ? $email_saisi : (isset($email) ? $email : '');
-    ?>
+    <header>
+        <h1>Modifier Profil</h1>
+    </header>
 
     <form method="POST" action="">
-        <div>
-            <label for="first_name">First Name:</label>
-            <input type="text" name="first_name" value="<?= $first_name_affiche; ?>">
+        <label for="first_name">First Name:</label>
+        <input type="text" name="first_name" value="<?= isset($first_name) ? $first_name : ''; ?>">
 
-            <label for="last_name">Last Name:</label>
-            <input type="text" name="last_name" value="<?= $lname_affiche; ?>">
-            <input type="password" name="password" value="">
+        <label for="last_name">Last Name:</label>
+        <input type="text" name="last_name" value="<?= isset($lname) ? $lname : ''; ?>">
 
-            <label for="email">Email:</label>
-            <input type="email" name="email" value="<?= $email_affiche; ?>">
+        <label for="email">Email:</label>
+        <input type="email" name="email" value="<?= isset($email) ? $email : ''; ?>">
 
-            <label for="password">Password:</label>
-        </div>
+        <label for="password">Password:</label>
+        <input type="password" name="password" value="<?= isset($pwd) ? $pwd : ''; ?>">
 
         <input type="submit" name="valider" value="Submit">
     </form>
 </body>
 </html>
+
